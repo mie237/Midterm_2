@@ -1,0 +1,310 @@
+---
+title: "MIE237 Term Test 2"
+date: "2016-03-22"
+output:
+  pdf_document:
+    keep_tex: true
+header-includes:
+- \newcounter{qnum}
+- \setcounter{qnum}{1}
+- \usepackage{ifthen}
+- \usepackage{lastpage}
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \lhead{}\chead{}\rhead{}
+- \lfoot{}\cfoot{Page\ \thepage\ of\ \pageref*{LastPage}}\rfoot{}
+- \renewcommand{\headrulewidth}{0pt}
+- \newcommand{\question}{\textbf{\arabic{qnum}}. \refstepcounter{qnum}}
+- \renewcommand{\labelenumi}{\alph{enumi})}
+- \renewcommand{\labelenumii}{\roman{enumii}.}
+- \newcommand{\total}[1]{\textbf{(#1 marks total)}}
+- \renewcommand{\marks}[1]{\ifthenelse {#1 = 1} {\textbf{(#1 mark)}} {\textbf{(#1 marks)}}}
+---
+
+```{r, echo=FALSE, message=FALSE}
+library(dplyr)
+library(rio)
+library(ggplot2)
+library(knitr)
+library(xtable)
+```
+
+\begin{center}
+\textbf{Examination Type B; Calculator Type 2 Permitted}
+
+\textbf{50 Minutes; 40 Marks Available}
+
+\begin{minipage}{12cm}\vspace{1cm}
+  Family Name:\hrulefill\\[1cm]
+  Given Name:\hrulefill\\[1cm]
+  Student Number:\hrulefill\\[1cm]
+\end{minipage}
+\end{center}
+
+```{r, echo=FALSE}
+n <- 102
+
+brands <- c("Camtran", "Nema", "Moloney")
+sizes <- c("100KVA", "75KVA", "50KVA")
+combos <- expand.grid(brands, sizes)
+
+set.seed(2)
+probs <- sample(3:7, 9, TRUE)/9*102
+b_s <- combos[sample(1:9, n, prob=probs, replace = TRUE),]
+age <- numeric(n)
+age[b_s$Var2 == "100KVA"] <- 10 + rweibull(sum(b_s$Var2 == "100KVA"),
+                                      1.4, 25)
+age[b_s$Var2 == "75KVA"] <- 10 + rweibull(sum(b_s$Var2 == "75KVA"),
+                                      1.6, 30)
+age[b_s$Var2 == "50KVA"] <- 10 + rweibull(sum(b_s$Var2 == "75KVA"),
+                                      1.8, 35)
+
+ID <- replicate(n, paste(c(sample(LETTERS, 2), 
+                           sample(0:9, 4, repl=TRUE)), collapse=""))
+
+intercept <- runif(1, -0.5, 1)
+  beta_1 <- -14
+  beta_2 <- 18
+  beta_Age <- 1/2 + runif(1, -0.1, 0.1)
+  
+  
+  genmat <- cbind(model.matrix(~ b_s$Var1), age)
+  X <- matrix(c(intercept, beta_1, beta_2, beta_Age), 4, 1)
+  rust <- as.numeric(intercept + genmat %*% X + rnorm(n, 0, 15))
+  rust <- pmin(100, rust)
+  rust <- pmax(0, rust)
+
+  tx <- data_frame(ID = ID, Manufacturer = b_s$Var1, Size = b_s$Var2,
+                 Age = age, Rust = rust)
+  
+
+
+```
+
+**This test contains \pageref*{LastPage} pages. Pages 6--8 are tables. Page 9 is a formula sheet. You can detach the formula sheet if you like, but please don't detach the tables. (Detaching too many pages causes the test to fall apart.) You may use the backs of pages for rough work.**
+
+An electricity distribution company (a company that delivers electricity to homes and businesses) has accumulated a dataset related to `r n` failed small transformers and wants to analyse some aspects of the data. 
+
+The dataset is similar in structure to the one from the first test, with one new variable added, similar to the first assignment. But the numbers are all different now.
+
+The dataset has `r ncol(tx)` variables: ``r paste(colnames(tx), collapse=", ")``. The  variable ``r colnames(tx)[1]`` contains the serial number of the transformer. The variable ``r colnames(tx)[2]`` contains the manufacturer name, one of: ``r paste(brands, collapse=", ")``. The variable ``r colnames(tx)[3]`` contains a description of the transformer's power rating. The variable ``r colnames(tx)[4]`` contains the age in years of the transformer at the time of its failure.  The variable ``r colnames(tx)[5]`` contains a number from 0 to 100 indicating the amount of corrosion that the transformer has.
+
+\pagebreak 
+
+\question \total{25} Here is a plot of the data along with the `R` output for the linear regression model fit with `Rust` as the output variable and `Age` as the input variable. Some of the entries have been removed and replaced with `XXX` (at least as many `X` as required).
+
+```{r, echo=FALSE, fig.width=4, fig.height=3, fig.align='center'}
+tx %>% 
+  ggplot(aes(x=Age, y=Rust)) + geom_point()
+```
+
+\begin{verbatim}
+Coefficients:
+            Estimate Std. Error t value  Pr(>|t|)    
+(Intercept)  2.80224    3.58909   0.781     0.437    
+Age          XXXXXXX    0.08673   4.617 XXXXXXXXX     
+---
+
+Residual standard error: 15.35 on XXXX degrees of freedom
+Multiple R-squared:  XXXXXX,	Adjusted R-squared:  XXXXXX 
+F-statistic: XXXXX on XX and XXXX DF,  p-value: XXXXXXXX
+\end{verbatim}
+\begin{enumerate}
+\item \marks{5} Perform the hypothesis test $H_0: \beta_1=0$ versus $H_1: \beta_1\ne 0$ \textbf{using an $F$ distribution and estimating the p-value using the 0.05 and 0.01 probability $F$ tables provided}. 
+
+
+\pagebreak
+\item \marks{3} Now, give the \textit{best possible} estimate for the p-value in a) using all available information in this midterm package (tables and formula sheet). \vspace{4cm}
+
+\item \marks{3} Produce a 95\% confidence interval for $\beta_1$. \vfill
+
+\item \marks{4} Denote the observed values of the `Age` variable by $\{x_1,\ldots,x_n\}$. It turns out that $\overline x=`r round(mean(tx$Age),1)`$ and $S_{xx} = `r format(round(var(tx$Age)*(n-1), 1))`$. Produce a 95\% confidence interval for the mean value of `Rust` at an `Age` of 50. \vfill
+
+\pagebreak
+\item \marks{3} Produce a 95\% prediction interval for the value of `Rust` for a transformer with an `Age` of 15. \vspace{4cm}
+
+\item \marks{4} Here is a normal quantile plot of the residuals, along with a plot of the raw data with the fitted regression line included. 
+
+```{r, echo=FALSE, fig.width=2.9, fig.height=2.9, fig.align='center'}
+tx.lm <- lm(Rust ~ Age, tx)
+tx.lm %>% 
+  ggplot(aes(sample = .resid)) + stat_qq()
+```
+
+```{r, echo=FALSE, fig.width=2.9, fig.height=2.9, fig.align='center'}
+tx %>% 
+  ggplot(aes(x=Age, y=Rust)) + geom_point() + geom_smooth(method="lm", se=FALSE)
+```
+
+In light of these plots, which of the calculations done in a) to e) above do you think is probably the \textit{least} accurate, and why? 
+
+\pagebreak
+\item \marks{3} Compute the sample correlation coefficient between the `Age` and `Rust` variables. \vspace{5cm}
+\end{enumerate}
+
+\question \total{10} Let's call the `Rust` variable $y$ and the `Age` variable $x_1$. Two new variables $x_2$ and $x_3$ are added to the data. If the transformer was manufactured by `r brands[1]`, both $x_2$ and $x_3$ are set to 0. If the transformer was manufactured by `r brands[2]`, $x_2$ is set to 1 and $x_3$ is set to 0. If the transformer was manufactured by `r brands[2]`, $x_2$ is set to 0 and $x_3$ is set to 1.
+
+The multiple regression model $y_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3 x_{3i}$ is considered.
+
+\begin{enumerate}
+\item \marks{7}When the model is fit to the data, the value of MSE turns out to be 152.73. Perform the hypothesis test that answers the question "is there any linear relationship between the output variable and the input variables?". (You will need information from 1.a). If you are completely stuck you just can go ahead and use a total sum of squares of 30000 for a maximum of 4 out of 7 marks.) \vspace{7cm}
+
+\item \marks{3}The p-value for the hypothesis test $H_0:\beta_1=0$ versus $H_1:\beta_1\ne 0$ is 0.000000148. Give a brief practical conclusion you can make from this hypothesis test.
+\end{enumerate}
+
+\newpage
+
+```{r, echo=FALSE, results='asis'}
+# t table
+p <- c(0.3, 0.2, 0.15, 0.1, 0.05, 0.025, 0.02, 0.015, 0.01,
+       0.0075, 0.005, 0.0025, 0.0005)
+df <- c(11:50, 60, 80, 100, 120, Inf)
+t_table <- t(Vectorize(qt, vectorize.args = "df")(p, df, lower.tail = FALSE))
+colnames(t_table) <- c(sprintf("%.2f", p[1:5]), format(p)[-c(1:5)])
+rownames(t_table) <- c(head(df, -1), "$\\infty$")
+t_table_x <- xtable(t_table, digits=3)
+addtorow <- list()
+addtorow$pos <- list(0,0)
+options(scipen=999)
+addtorow$command <- c(paste0("& \\multicolumn{", length(p), "}{c}{Upper tail probabilities for $t_\\nu$ distributions $P(t_\\nu \\ge t)$}\\\\\n"), paste0(paste(c("df", p), sep = "", collapse=" & "), "\\\\\n"))
+print(t_table_x, comment=FALSE, add.to.row = addtorow, 
+      include.colnames = FALSE, scalebox = 0.9,
+      sanitize.text.function = function(x) {x})
+```
+
+\newpage
+
+```{r, echo=FALSE, results='asis'}
+df2 <- c(11:50, 60, 80, 100, 120, Inf)
+df1 <- 1:9
+
+f_table <- t(Vectorize(qf, vectorize.args = "df2")(0.05, df1=1:9, df2, lower.tail=FALSE))
+
+colnames(f_table) <- 1:9
+rownames(f_table) <- c(head(df2, -1), "$\\infty$")
+f_table_x <- xtable(f_table, digits=3)
+addtorow <- list()
+addtorow$pos <- list(0,0)
+options(scipen=999)
+addtorow$command <- c(paste0("& \\multicolumn{", length(df1), "}{c}{0.05 critical values for $F_{df1,df2}$ distributions. Columns: $df1$\ Rows: $df2$}\\\\\n"), paste0(paste(c("", df1), sep = "", collapse=" & "), "\\\\\n"))
+
+print(f_table_x, comment=FALSE, add.to.row = addtorow, include.colnames = FALSE,
+      sanitize.text.function = function(x) {x})
+```
+
+
+```{r, echo=FALSE, results='asis'}
+df2 <- c(11:50, 60, 80, 100, 120, Inf)
+df1 <- 1:9
+
+f_table <- t(Vectorize(qf, vectorize.args = "df2")(0.01, df1=1:9, df2, lower.tail=FALSE))
+
+colnames(f_table) <- 1:9
+rownames(f_table) <- c(head(df2, -1), "$\\infty$")
+f_table_x <- xtable(f_table, digits=3)
+addtorow <- list()
+addtorow$pos <- list(0,0)
+options(scipen=999)
+addtorow$command <- c(paste0("& \\multicolumn{", length(df1), "}{c}{0.01 critical values for $F_{df1,df2}$ distributions. Columns: $df1$\ Rows: $df2$}\\\\\n"), paste0(paste(c("", df1), sep = "", collapse=" & "), "\\\\\n"))
+
+print(f_table_x, comment=FALSE, add.to.row = addtorow, include.colnames = FALSE,
+      sanitize.text.function = function(x) {x})
+```
+
+\pagebreak
+
+\renewcommand{\d}[2]{\overline #1_{#2\cdot}}
+\newcommand{\Var}[1]{\text{Var}\left( #1 \right)}
+\newcommand{\Cov}[2]{\text{Cov}\left( #1, #2 \right)}
+\newcommand{\bs}[1]{\boldsymbol{#1}}
+\newcommand{\E}[1]{\text{E}\left( #1 \right)}
+\newcommand{\Sample}[1]{#1_1,\ldots,#1_n}
+\newcommand{\od}[2]{\overline #1_{#2\cdot}}
+\newcommand{\ol}[1]{\overline #1}
+
+\twocolumn
+\raggedright
+
+\begin{center}
+  \textbf{Simple Linear Regression}
+\end{center}
+Model: $y_i = \beta_0 + \beta_1 x_i + \varepsilon_i$ with $\varepsilon_i
+\sim N(0, \sigma^2)$
+
+Analysis:
+$\hat\beta_0 = \ol y - \hat\beta_1\ol{x}$
+
+$\hat\beta_1 = S_{xy}/S_{xx}$
+
+$S_{xy} = \sum_{i=1}^n (x_i-\ol{x})(y_i - \ol{y})$
+
+$S_{xx} = \sum_{i=1}^n (x_i-\ol{x})^2$
+
+$\Var{\hat\beta_1}=\frac{\sigma^2}{S_{xx}}$
+
+Fitted value at $x_i$ is $\hat{y}_i = \hat\beta_0+\hat\beta_1x_i$
+
+SS decomposition details:
+
+\begin{tabular}{ccccc} $\sum_{i=1}^n\left(y_i - \overline y\right)^2$  &=&
+$\sum_{i=1}^n\left(\hat y_i - \overline y\right)^2$ &+&
+$\sum_{i=1}^n\left(y_i - \hat y_i\right)^2$\\
+SST &=& SSR &+& SSE\\
+$n-1$ d.f. &=& 1 d.f. &+& $n-2$ d.f.
+\end{tabular}
+
+Test statistic for $\beta_1$:
+$$T=\frac{\hat\beta_1 - \beta_1}{\sqrt{MSE/S_{xx}}}\sim t_{n-2}$$
+
+The denominator is called the ``standard error'' of $\hat\beta_1$
+
+$(1-\alpha)\cdot 100\%$ C.I. for $\beta_1$ is:
+
+$$\hat\beta_1 \pm t_{n-2,\alpha/2} \sqrt{\frac{MSE}{S_{xx}}}$$
+
+Alternate approach for $H_0: \beta_1 = 0$ versus $H_1:
+\beta_1 \ne 0$ uses (again\ldots $T^2=F$):
+$$F=\frac{SSR/1}{SSE/(n-2)} = \frac{MSR}{MSE} \sim F_{1,n-2}$$
+
+$(1-\alpha)\cdot 100\%$ C.I. for mean response at $x_0$:
+$$\hat\beta_0+\hat\beta_1 x_0\pm t_{\alpha/2,n-2}
+{\sqrt{MSE}\sqrt{\frac{1}{n} + \frac{(x_0-\overline x)^2}{S_{xx}}}}$$
+$(1-\alpha)\cdot 100\%$ P.I. for new response at $x_0$:
+$$\hat\beta_0+\hat\beta_1 x_0\pm t_{\alpha/2,n-2}
+{\sqrt{MSE}\sqrt{1+\frac{1}{n} + \frac{(x_0-\overline
+      x)^2}{S_{xx}}}}$$
+
+\begin{center}
+  \textbf{Sample Correlation Coefficient}
+\end{center}
+
+$$r=\frac{S_{xy}}{\sqrt{S_{xx}S_{yy}}}$$
+
+In simple regression the square of $r$ is equal to $R^2$
+
+\begin{center}
+  \textbf{Multiple Linear Regression}
+\end{center}
+
+Model: $y_i = \beta_0 + \beta_1 x_{1i} + \cdots + \beta_kx_{ki} +
+\varepsilon_i$ with $\varepsilon_i \sim N(0, \sigma^2)$. Equivalently:
+$\boldsymbol{Y} = \boldsymbol
+X\boldsymbol{\beta}+\boldsymbol{\varepsilon}$
+
+No restriction on the $x_i$. Could be a function of one or more other
+input variables (esp. power or interaction of two terms)
+
+SS decomposition is the same as in the simple case, except now the
+d.f. for SST, SSR, and SSE are $n-1$, $k$, and $n-(k+1)$ respectively. 
+
+\vspace{4cm}
+
+Inference for individual $\beta_i$ based on:
+$$\frac{\hat\beta_i - \beta_i}{\sqrt{MSE}\sqrt{c_{ii}}}\sim
+t_{n-(k+1)}$$
+where $c_{ii}$ is the $(i+1)^{st}$ diagonal element of $(\boldsymbol
+X' \boldsymbol X)^{-1}$
+
+Overall $F$ test is based on
+$$F=\frac{\text{MSR}}{\text{MSE}} \sim F_{k, n-(k+1)}$$
+No $T^2=F$ relationship in multiple regression case.
